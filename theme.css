@@ -1,0 +1,63 @@
+:root {
+  --color-primary: #265fd2;
+  --color-primary-contrast: #ffffff;
+  --color-bg: #091426;
+  --color-surface: #10223a;
+  --color-text: #edf5ff;
+  --color-muted: #a6b9d2;
+  --color-line: #304966;
+  --color-accent: #80cfff;
+  color-scheme: dark;
+  --font-heading: 'Manrope', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --radius: 1rem;
+}
+
+.student-enrollment { margin-bottom: 1.25rem; padding: 1rem; border: 1px solid #dce0f5; border-radius: var(--radius); }
+.student-enrollment summary { cursor: pointer; font-weight: 700; color: var(--color-primary); }
+.student-enrollment fieldset { display: grid; gap: .75rem; margin-top: .85rem; min-width: 0; }
+.student-enrollment label { display: grid; gap: .25rem; font-size: .85rem; font-weight: 600; }
+.student-enrollment input { width: 100%; padding: .5rem; border: 1px solid #cbd5e1; border-radius: .5rem; }
+.student-enrollment p { font-size: .8rem; color: #475569; }
+.student-enrollment button { padding: .55rem; border-radius: .5rem; background: var(--color-primary); color: white; font-weight: 700; }
+#student-status:not(:empty) { margin-top: .75rem; }
+.face-tag { position: absolute; top: 0; left: 0; padding: 2px 5px; background: #153c30; color: white; font: 600 11px/1.3 system-ui, sans-serif; white-space: nowrap; border-radius: 3px; }
+.campus-wordmark { color: #182043; font-size: clamp(16px, 3.7vw, 24px); font-weight: 800; letter-spacing: -.045em; white-space: nowrap; }
+.campus-wordmark b { display: inline-block; vertical-align: .12em; padding: .15em .4em; border-radius: .4em; color: #4338ca; background: #e8e8ff; font-size: .67em; letter-spacing: .035em; }
+
+/* Dark-blue palette for static panels and dynamically updated scanner controls. */
+body .glass { background-color: rgb(9 20 38 / 90%); }
+body .bg-white { background-color: var(--color-surface); }
+body :is(.bg-white\/60, .bg-white\/65, .bg-white\/80, .bg-white\/85) { background-color: rgb(15 32 54 / 93%); }
+body :is(.bg-slate-50, .bg-slate-50\/80, .bg-slate-100) { background-color: #152b46; }
+body .bg-slate-200 { background-color: #263f5d; }
+body #media-stage { background-color: #0b1b30; }
+body #media-stage.drop-active { background: #193957 !important; }
+body .bg-slate-900 { background-color: #254c88; }
+body :is(.bg-indigo-50, .bg-indigo-50\/80, .bg-indigo-100, .bg-violet-50) { background-color: #183858; }
+body .bg-indigo-100\/70 { background-color: rgb(36 102 189 / 28%); }
+body :is(.border-slate-100, .border-slate-200, .border-slate-200\/70, .border-slate-200\/80, .border-indigo-100, .border-white\/70, .student-enrollment) { border-color: var(--color-line); }
+body :is(.border-slate-300, .student-enrollment input) { border-color: #486381; }
+body :is(.text-slate-950, .text-slate-900, .text-slate-800, .campus-wordmark) { color: var(--color-text); }
+body :is(.text-slate-700, .text-slate-600, .text-slate-300) { color: #c9daec; }
+body :is(.text-slate-500, .text-slate-400, .student-enrollment p) { color: var(--color-muted); }
+body :is(.text-indigo-500, .text-indigo-600, .text-indigo-700, .text-indigo-900, .text-indigo-900\/70, .text-violet-600, .student-enrollment summary) { color: var(--color-accent); }
+body .campus-wordmark b { color: #bdeaff; background-color: #184875; }
+body :is(.bg-emerald-50, .bg-emerald-100) { background-color: #103845; }
+body .border-emerald-100 { border-color: #245562; }
+body :is(.text-emerald-500, .text-emerald-600, .text-emerald-700) { color: #78e3c5; }
+body .bg-red-50 { background-color: #452434; }
+body .text-red-600 { color: #ffabb5; }
+body :is(.student-enrollment input, #remove-id) { background-color: #0c1d32; color: var(--color-text); }
+body :is(.hover\:bg-slate-50, .hover\:bg-slate-100):hover { background-color: #233e5e; }
+body :is(.hover\:bg-slate-700, .hover\:bg-slate-900):hover { background-color: #305998; }
+body :is(.hover\:text-slate-800, .hover\:text-slate-900, .hover\:text-indigo-800):hover { color: #e2f6ff; }
+body .hover\:border-slate-300:hover { border-color: #6482a8; }
+body .ring-slate-100 { --tw-ring-color: var(--color-line); }
+body :is(.shadow-indigo-200\/70, .shadow-indigo-200\/80, .hover\:shadow-indigo-300:hover) { --tw-shadow-color: rgb(2 12 30 / 60%); }
+body .accent-indigo-400 { accent-color: var(--color-accent); }
+body .border-t-indigo-600 { border-top-color: var(--color-accent); }
+body #media-stage [stroke="#818cf8"] { stroke: #81b4ed; }
+body #media-stage [stroke="#4f46e5"] { stroke: var(--color-accent); }
+body :focus-visible { outline-color: var(--color-accent); }
+footer p strong { font-size: 1.4rem; }

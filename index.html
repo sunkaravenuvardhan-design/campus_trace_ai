@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f7f8fc" />
+  <title>Campus Trace AI — Human face detection</title>
+  <meta name="description" content="Detect human faces in photos, recorded video, and live camera — privately, right in your browser." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./theme.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['DM Sans', 'sans-serif'],
+            display: ['Manrope', 'sans-serif']
+          }
+        }
+      }
+    };
+
+  </script>
+  <style>
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--color-bg);
+      color: var(--color-text);
+    }
+
+    .font-display {
+      font-family: var(--font-heading);
+    }
+
+    .glass {
+      background: rgba(255, 255, 255, .82);
+      backdrop-filter: blur(18px);
+    }
+
+    .drop-active {
+      border-color: var(--color-primary) !important;
+      background: rgba(83, 93, 226, .06) !important;
+    }
+
+    .scan-line {
+      animation: scan 2.2s ease-in-out infinite;
+    }
+
+    @keyframes scan {
+
+      0%,
+      100% {
+        top: 12%;
+        opacity: .35
+      }
+
+      50% {
+        top: 86%;
+        opacity: 1
+      }
+    }
+
+    .pulse-dot {
+      animation: pulse 1.8s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, .4)
+      }
+
+      70% {
+        box-shadow: 0 0 0 8px rgba(239, 68, 68, 0)
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0)
+      }
+    }
+
+    .face-box {
+      position: absolute;
+      border: 1px solid #22c55e;
+      border-radius: 0;
+      box-shadow: none;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .canvas-wrap video,
+    .canvas-wrap img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .custom-scroll::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #d7dbea;
+      border-radius: 20px;
+    }
+
+  </style>
+</head>
+
+<body class="min-h-screen">
+  <header class="sticky top-0 z-30 border-b border-slate-200/70 glass">
+    <div class="mx-auto flex h-[72px] max-w-[1400px] items-center justify-between px-5 lg:px-10">
+      <a href="#" class="flex items-center gap-3" aria-label="Campus Trace AI home">
+        <span class="flex h-10 w-10 items-center justify-center rounded-[14px] bg-[var(--color-primary)] text-white shadow-lg shadow-indigo-200/70">
+          <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <g stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m3 6 3-3 15 6-4 5L3 8z" fill="currentColor" fill-opacity=".15"/>
+              <path d="m15 13-1 2 3 1.3 2-3.7M9 11l-2 6H3m0-3v6"/>
+            </g>
+          </svg>
+        </span>
+        <span class="campus-wordmark font-display">Campus Trace <b>AI</b></span>
+      </a>
+      <nav class="hidden items-center gap-8 text-[13px] font-semibold text-slate-500 md:flex">
+        <a href="#workspace" class="transition hover:text-slate-900">Workspace</a>
+        <a href="#how-it-works" class="transition hover:text-slate-900">How it works</a>
+        <a href="#privacy" class="transition hover:text-slate-900">Privacy</a>
+      </nav>
+      <div class="flex items-center gap-3">
+        <span class="hidden items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[11px] font-bold text-emerald-700 sm:flex"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>Runs in your browser</span>
+        <a href="#workspace" class="rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-slate-700">Open studio <span class="ml-1">↗</span></a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="relative overflow-hidden px-5 pb-10 pt-14 sm:pt-[76px]">
+      <div class="pointer-events-none absolute left-1/2 top-8 -z-10 h-[450px] w-[800px] -translate-x-1/2 rounded-full bg-indigo-100/70 blur-[100px]"></div>
+      <div class="mx-auto max-w-4xl text-center">
+        <div class="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-white/80 px-3.5 py-2 text-[11px] font-bold tracking-wide text-indigo-700 shadow-sm">
+          <span class="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100"><svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+              <path d="M8 1.7 13 4v3.7c0 3.2-2.2 5.4-5 6.6-2.8-1.2-5-3.4-5-6.6V4l5-2.3Z" stroke="currentColor" stroke-width="1.4" />
+              <path d="m5.8 8 1.4 1.4 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+            </svg></span>
+          HUMAN FACE DETECTION &amp; STUDENT MATCHING
+        </div>
+        <h1 class="font-display text-[42px] font-extrabold leading-[1.08] tracking-[-.055em] text-slate-950 sm:text-[60px]">Find the faces.<br class="hidden sm:block" /> Leave the rest behind.</h1>
+        <p class="mx-auto mt-5 max-w-[600px] text-[15px] leading-7 text-slate-500 sm:text-[17px]">A focused face detector for photos, video, and live camera. Get clear face counts and visual markers without sending your media anywhere.</p>
+        <div class="mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[12px] font-semibold text-slate-500">
+          <span class="flex items-center gap-2"><svg class="text-emerald-500" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="m3.5 8.2 2.8 2.7 6.2-6.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>Human faces only</span>
+          <span class="flex items-center gap-2"><svg class="text-emerald-500" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="m3.5 8.2 2.8 2.7 6.2-6.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>Private by design</span>
+          <span class="flex items-center gap-2"><svg class="text-emerald-500" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="m3.5 8.2 2.8 2.7 6.2-6.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>No account needed</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="workspace" class="mx-auto max-w-[1400px] scroll-mt-24 px-4 pb-20 sm:px-6 lg:px-10">
+      <div class="overflow-hidden rounded-[24px] border border-slate-200/80 bg-white shadow-[0_24px_80px_-38px_rgba(35,43,81,.25)]">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-7">
+          <div class="flex items-center gap-3">
+            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600"><svg width="19" height="19" viewBox="0 0 20 20" fill="none">
+                <rect x="2.5" y="3.5" width="15" height="13" rx="2.2" stroke="currentColor" stroke-width="1.5" />
+                <circle cx="7" cy="8" r="1.4" stroke="currentColor" stroke-width="1.4" />
+                <path d="m3 14 4.3-3.8a1.2 1.2 0 0 1 1.6.1l2.2 2 1.3-1.1a1.2 1.2 0 0 1 1.6.1l2.5 2.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+              </svg></div>
+            <div>
+              <h2 class="font-display text-[15px] font-extrabold tracking-[-.03em]">Detection studio</h2>
+              <p class="mt-0.5 text-[11px] text-slate-400">Choose a source to get started</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1.5 text-[10px] font-bold text-slate-500"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>LOCAL PROCESSING</div>
+        </div>
+
+        <div class="grid lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div class="min-w-0 border-b border-slate-100 p-4 sm:p-6 lg:border-b-0 lg:border-r lg:p-7">
+            <div class="mb-5 flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Media source">
+              <button data-mode="photo" class="mode-btn flex shrink-0 items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-[12px] font-bold text-white transition" role="tab" aria-selected="true"><svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+                  <rect x="2.2" y="3" width="13.6" height="12" rx="2" stroke="currentColor" stroke-width="1.5" />
+                  <circle cx="6.4" cy="7" r="1.3" stroke="currentColor" stroke-width="1.4" />
+                  <path d="m3 13 3.5-3.2a1 1 0 0 1 1.4 0l2 1.8 1.1-.9a1 1 0 0 1 1.3 0l2.7 2.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                </svg>Photo</button>
+              <button data-mode="video" class="mode-btn flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-[12px] font-bold text-slate-500 transition hover:bg-slate-100" role="tab" aria-selected="false"><svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+                  <rect x="2" y="3.2" width="10" height="11.6" rx="2" stroke="currentColor" stroke-width="1.5" />
+                  <path d="m12.3 7 3.2-2v8l-3.2-2" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+                </svg>Recorded video</button>
+              <button data-mode="camera" class="mode-btn flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-[12px] font-bold text-slate-500 transition hover:bg-slate-100" role="tab" aria-selected="false"><svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+                  <rect x="2" y="5" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5" />
+                  <circle cx="9" cy="10" r="2.3" stroke="currentColor" stroke-width="1.5" />
+                  <path d="m6 5 1-2h4l1 2" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+                </svg>Live camera</button>
+            </div>
+
+            <div id="media-stage" class="canvas-wrap relative flex min-h-[320px] items-center justify-center overflow-hidden rounded-[18px] border border-dashed border-slate-300 bg-[#f7f8fc] sm:min-h-[425px]">
+              <div id="empty-state" class="mx-auto w-full max-w-md px-6 py-10 text-center">
+                <div class="relative mx-auto mb-5 flex h-[76px] w-[76px] items-center justify-center rounded-[24px] bg-white shadow-[0_8px_30px_-12px_rgba(58,72,127,.22)] ring-1 ring-slate-100">
+                  <svg width="35" height="35" viewBox="0 0 36 36" fill="none">
+                    <rect x="4.5" y="6" width="27" height="24" rx="4" stroke="#818cf8" stroke-width="1.7" />
+                    <circle cx="13" cy="15" r="3" stroke="#818cf8" stroke-width="1.7" />
+                    <path d="m6 26 7.4-6.2a2.4 2.4 0 0 1 3.1.1l3.8 3.1 2.2-1.8a2.4 2.4 0 0 1 3.1.1l4.4 3.7" stroke="#818cf8" stroke-width="1.7" stroke-linecap="round" />
+                    <path d="M25 7.5v7m-3.5-3.5h7" stroke="#4f46e5" stroke-width="1.7" stroke-linecap="round" />
+                  </svg>
+                  <span class="absolute -right-1.5 -top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-600"><svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                      <path d="m3.5 8.2 2.8 2.7 6.2-6.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg></span>
+                </div>
+                <h3 id="empty-title" class="font-display text-[17px] font-extrabold tracking-[-.03em]">Drop a photo to begin</h3>
+                <p id="empty-copy" class="mx-auto mt-2 max-w-[300px] text-[12px] leading-5 text-slate-500">We’ll highlight human faces and ignore objects, animals, and look-alikes.</p>
+                <div class="mt-5 flex flex-wrap justify-center gap-2">
+                  <button id="upload-btn" class="rounded-xl bg-[var(--color-primary)] px-5 py-3 text-[12px] font-bold text-white shadow-lg shadow-indigo-200/80 transition hover:-translate-y-0.5 hover:shadow-indigo-300">Choose photo <span class="ml-1">↑</span></button>
+                  <button id="sample-btn" class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-[12px] font-bold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50">Try sample</button>
+                </div>
+                <p class="mt-4 text-[10px] font-medium text-slate-400">JPG, PNG, WEBP, HEIC · photos with stamps and captions supported · up to 50 MB</p>
+              </div>
+              <div id="progress-state" class="absolute inset-0 z-10 hidden items-center justify-center bg-white/85 backdrop-blur-sm">
+                <div class="text-center">
+                  <div class="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-[3px] border-indigo-100 border-t-indigo-600"></div>
+                  <p id="progress-label" class="text-sm font-bold text-slate-800">Finding human faces…</p>
+                  <p class="mt-1 text-xs text-slate-400">Analyzing locally in your browser</p>
+                </div>
+              </div>
+              <div id="media-layer" class="absolute inset-0 hidden items-center justify-center overflow-hidden"></div>
+              <button id="video-center-play" type="button" class="absolute left-1/2 top-1/2 z-20 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-2xl border border-white/30 bg-slate-950/80 px-5 py-4 text-sm font-bold text-white shadow-2xl backdrop-blur-md transition hover:scale-105 hover:bg-slate-950" aria-label="Play video">
+                <span class="flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-950"><svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2.8a1 1 0 0 1 1.5-.86l7.2 4.2a1 1 0 0 1 0 1.72l-7.2 4.2A1 1 0 0 1 4 11.2V2.8Z"/></svg></span>
+                <span>Play video</span>
+              </button>
+              <button id="stop-camera-btn" type="button" class="absolute left-3 top-3 z-20 hidden rounded-xl bg-red-700 px-3 py-2 text-xs font-bold text-white">Stop camera</button>
+              <button id="switch-camera-btn" type="button" class="absolute right-3 top-3 z-20 hidden items-center gap-2 rounded-xl border border-white/20 bg-slate-950/75 px-3 py-2 text-[11px] font-bold text-white shadow-lg backdrop-blur-md transition hover:bg-slate-900" aria-label="Switch to rear camera">
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.5" y="5" width="15" height="11" rx="2" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10.5" r="2.7" stroke="currentColor" stroke-width="1.5"/><path d="m6.5 5 1-2h5l1 2" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                <span id="switch-camera-label">Use rear camera</span>
+              </button>
+              <div id="scan-line" class="scan-line pointer-events-none absolute left-0 right-0 z-10 hidden h-px bg-emerald-300 shadow-[0_0_16px_4px_rgba(52,211,153,.45)]"></div>
+              <div id="video-controls" class="absolute bottom-3 left-1/2 z-20 hidden max-w-[calc(100%-1rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-2 rounded-xl border border-white/70 bg-slate-950/85 p-2 text-white shadow-xl backdrop-blur-md">
+                <button id="play-btn" type="button" class="flex h-10 shrink-0 items-center gap-2 rounded-lg bg-white/15 px-3 text-[11px] font-bold transition hover:bg-white/25" aria-label="Play video"><svg id="play-icon" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M4 2.8a1 1 0 0 1 1.5-.86l7.2 4.2a1 1 0 0 1 0 1.72l-7.2 4.2A1 1 0 0 1 4 11.2V2.8Z" />
+                  </svg><span id="play-label">Play</span></button>
+                <span id="video-time" class="min-w-[78px] text-center font-mono text-[10px]">0:00 / 0:00</span>
+                <input id="video-seek" type="range" min="0" max="100" value="0" class="h-1 w-24 accent-indigo-400 sm:w-36" aria-label="Seek video" />
+              </div>
+              <input id="file-input" class="hidden" type="file" accept="image/*,.heic,.heif,.avif,.jpg,.jpeg,.png,.webp,.gif,.bmp,.mp4,.webm,.mov,.m4v" />
+            </div>
+            <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <p class="flex items-center gap-2 text-[11px] text-slate-400"><svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 1.7 13 4v3.7c0 3.2-2.2 5.4-5 6.6-2.8-1.2-5-3.4-5-6.6V4l5-2.3Z" stroke="currentColor" stroke-width="1.3" />
+                  <path d="M8 5.2v3.1m0 2h.01" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+                </svg><span id="stage-hint">Your files stay on this device and are never uploaded.</span></p>
+              <button id="clear-btn" class="hidden items-center gap-1.5 rounded-lg px-3 py-2 text-[11px] font-bold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"><svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                  <path d="M3.5 4.5h9m-7.8 0 .5 8.3h4.6l.5-8.3M6.2 4.5V3h3.6v1.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>Clear media</button>
+            </div>
+          </div>
+
+          <aside class="flex flex-col bg-white p-5 sm:p-6">
+            <div class="mb-3 flex items-center gap-2">
+              <p class="text-sm font-semibold">Saved students <strong id="student-total">…</strong></p>
+              <button id="manage-students" type="button" aria-label="Manage saved student IDs" title="Manage saved student IDs" aria-controls="student-manager" aria-expanded="false" class="rounded-lg border border-slate-200 p-2 text-indigo-700">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="7" r="3"/><path d="M2 20v-2a7 7 0 0 1 13-3m1-4h6"/></svg>
+              </button>
+            </div>
+            <div id="student-manager" hidden class="mb-4 rounded-xl border border-slate-200 p-3">
+              <label for="remove-id" class="block text-xs font-bold">Student ID to remove</label>
+              <select id="remove-id" class="my-2 w-full rounded-lg border border-slate-300 p-2 text-sm"></select>
+              <button id="remove-student" disabled type="button" class="rounded-lg bg-red-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">Remove selected ID</button>
+              <p id="remove-status" role="status" class="mt-2 text-xs"></p>
+            </div>
+            <label class="mb-3 flex items-center gap-2 text-sm font-semibold">
+              <input id="match-students" type="checkbox" autocomplete="off"> Match student IDs
+            </label>
+            <details class="student-enrollment">
+              <summary>Add student</summary>
+              <form id="student-form">
+                <fieldset>
+                  <label>Student ID <input name="studentId" required maxlength="80" autocomplete="off"></label>
+                  <label>Photo with one face <input name="portrait" type="file" accept="image/*" required></label>
+                  <p>This browser remembers the ID and face data. The original photo is discarded after enrollment.</p>
+                  <button type="submit">Save student</button>
+                </fieldset>
+                <p id="student-status" role="status"></p>
+              </form>
+            </details>
+            <p id="matching-status" class="mb-3 text-xs text-slate-500" role="status"></p>
+            <section class="mb-5 rounded-xl border border-slate-200 p-3" aria-labelledby="history-title">
+              <div class="flex items-center justify-between gap-2">
+                <h3 id="history-title" class="text-sm font-bold">Match history</h3>
+                <button id="reset-history" type="button" aria-label="Reset match history" class="ml-auto rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500 disabled:opacity-50">Reset</button>
+                <button id="history-toggle" type="button" disabled aria-expanded="false" aria-controls="history-results" class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-indigo-700 disabled:opacity-50">Show results</button>
+              </div>
+              <div id="history-results" hidden>
+              <p id="history-message" class="mt-1 text-xs text-slate-500" role="status"></p>
+              <ol id="match-history" class="mt-2 max-h-48 space-y-2 overflow-y-auto text-xs"></ol>
+              </div>
+            </section>
+            <div class="flex items-center justify-between">
+              <h3 class="font-display text-[14px] font-extrabold tracking-[-.025em]">Detection results</h3><span id="status-badge" class="rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-slate-400">Waiting</span>
+            </div>
+            <div class="mt-5 rounded-[16px] border border-slate-100 bg-slate-50/80 p-4">
+              <div class="flex items-end justify-between">
+                <div>
+                  <p class="text-[10px] font-bold uppercase tracking-[.12em] text-slate-400">Human faces</p>
+                  <p id="face-count" class="mt-1 font-display text-[42px] font-extrabold leading-none tracking-[-.06em] text-slate-300">—</p>
+                </div>
+                <div id="result-icon" class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-300"><svg width="21" height="21" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="8" r="3.3" stroke="currentColor" stroke-width="1.6" />
+                    <path d="M5.5 20c.8-3.1 3-4.8 6.5-4.8s5.7 1.7 6.5 4.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                  </svg></div>
+              </div>
+              <div class="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                <div id="confidence-bar" class="h-full w-0 rounded-full bg-emerald-400 transition-all duration-700"></div>
+              </div>
+              <div class="mt-2 flex justify-between text-[10px] text-slate-400"><span>Detection confidence</span><span id="confidence-value">—</span></div>
+            </div>
+            <div id="result-message" class="mt-4 rounded-xl border border-slate-100 bg-white px-3.5 py-3 text-[11px] leading-[1.65] text-slate-500">Add a photo or video, or switch on your camera to see detected faces here.</div>
+            <div class="mt-6 border-t border-slate-100 pt-5">
+              <div class="mb-3 flex items-center justify-between">
+                <h4 class="text-[10px] font-bold uppercase tracking-[.12em] text-slate-400">Session details</h4><span id="session-number" class="font-mono text-[10px] text-slate-300">FW—</span>
+              </div>
+              <dl class="space-y-3 text-[11px]">
+                <div class="flex justify-between">
+                  <dt class="text-slate-400">Source</dt>
+                  <dd id="detail-source" class="font-semibold text-slate-500">None</dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="text-slate-400">Processing</dt>
+                  <dd class="font-semibold text-emerald-600">On-device</dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="text-slate-400">Media stored</dt>
+                  <dd class="font-semibold text-slate-500">Never</dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="text-slate-400">Last scan</dt>
+                  <dd id="detail-time" class="font-semibold text-slate-500">—</dd>
+                </div>
+              </dl>
+            </div>
+            <div class="mt-auto pt-7">
+              <div class="rounded-xl bg-indigo-50/80 p-3.5">
+                <div class="flex gap-2.5"><span class="mt-0.5 text-indigo-500"><svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M8 1.7 13 4v3.7c0 3.2-2.2 5.4-5 6.6-2.8-1.2-5-3.4-5-6.6V4l5-2.3Z" stroke="currentColor" stroke-width="1.3" />
+                      <path d="M8 5.2v3.1m0 2h.01" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+                    </svg></span>
+                  <p class="text-[10px] leading-[1.6] text-indigo-900/70"><strong class="font-bold text-indigo-900">Privacy comes first.</strong> Media is analyzed locally and is never saved or shared.</p>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+      <p class="mx-auto mt-4 max-w-3xl text-center text-[10px] leading-5 text-slate-400">Face detection is an automated estimate and may miss faces or mark non-face regions. Results are not intended for identification, access control, or other high-stakes decisions.</p>
+    </section>
+
+    <section id="how-it-works" class="border-y border-slate-200/70 bg-white/65 px-5 py-16 sm:py-20">
+      <div class="mx-auto max-w-6xl">
+        <div class="mx-auto max-w-2xl text-center">
+          <p class="text-[10px] font-extrabold uppercase tracking-[.19em] text-indigo-600">Simple by design</p>
+          <h2 class="mt-3 font-display text-[30px] font-extrabold tracking-[-.05em] text-slate-950 sm:text-[38px]">From media to faces in seconds.</h2>
+          <p class="mt-3 text-sm leading-6 text-slate-500">No setup, no uploads, no unnecessary complexity. Just choose how you want to scan.</p>
+        </div>
+        <div class="mt-10 grid gap-4 md:grid-cols-3">
+          <article class="rounded-[20px] border border-slate-100 bg-white p-6 shadow-sm">
+            <div class="flex h-11 w-11 items-center justify-center rounded-[14px] bg-indigo-50 text-indigo-600"><svg width="21" height="21" viewBox="0 0 20 20" fill="none">
+                <rect x="2.5" y="3.5" width="15" height="13" rx="2.3" stroke="currentColor" stroke-width="1.5" />
+                <circle cx="7" cy="8" r="1.4" stroke="currentColor" stroke-width="1.4" />
+                <path d="m3.5 14 3.4-3 2.1 1.8 1.3-1.1a1.2 1.2 0 0 1 1.6 0l2.7 2.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+              </svg></div>
+            <h3 class="mt-5 font-display text-[15px] font-extrabold">Scan a photo</h3>
+            <p class="mt-2 text-[12px] leading-6 text-slate-500">Drop in a JPG, PNG, or WEBP. Face markers appear right over your image, ready to inspect.</p><span class="mt-4 inline-block rounded-full bg-indigo-50 px-2.5 py-1 text-[9px] font-bold text-indigo-600">JPG · PNG · WEBP</span>
+          </article>
+          <article class="rounded-[20px] border border-slate-100 bg-white p-6 shadow-sm">
+            <div class="flex h-11 w-11 items-center justify-center rounded-[14px] bg-violet-50 text-violet-600"><svg width="21" height="21" viewBox="0 0 20 20" fill="none">
+                <rect x="2" y="3.5" width="11" height="13" rx="2.2" stroke="currentColor" stroke-width="1.5" />
+                <path d="m13.2 7 4.3-2.3v10.6L13.2 13" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+                <path d="m7 7 3 2-3 2V7Z" fill="currentColor" />
+              </svg></div>
+            <h3 class="mt-5 font-display text-[15px] font-extrabold">Review a video</h3>
+            <p class="mt-2 text-[12px] leading-6 text-slate-500">Play a recorded clip to automatically find faces throughout the video, including smaller faces in group scenes.</p><span class="mt-4 inline-block rounded-full bg-violet-50 px-2.5 py-1 text-[9px] font-bold text-violet-600">MP4 · WEBM · MOV*</span>
+          </article>
+          <article class="rounded-[20px] border border-slate-100 bg-white p-6 shadow-sm">
+            <div class="flex h-11 w-11 items-center justify-center rounded-[14px] bg-emerald-50 text-emerald-600"><svg width="21" height="21" viewBox="0 0 20 20" fill="none">
+                <rect x="2.5" y="5" width="15" height="11" rx="2.2" stroke="currentColor" stroke-width="1.5" />
+                <circle cx="10" cy="10.5" r="2.6" stroke="currentColor" stroke-width="1.5" />
+                <path d="m7 5 1-2h4l1 2" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+                <circle cx="15" cy="5" r="1.1" fill="#ef4444" />
+              </svg></div>
+            <h3 class="mt-5 font-display text-[15px] font-extrabold">Use live camera</h3>
+            <p class="mt-2 text-[12px] leading-6 text-slate-500">Grant camera permission when asked to see faces detected in your live camera feed.</p><span class="mt-4 inline-block rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-bold text-emerald-700">PERMISSION REQUIRED</span>
+          </article>
+        </div>
+        <p class="mt-4 text-center text-[10px] text-slate-400">*Video formats depend on your browser.</p>
+      </div>
+    </section>
+
+    <section id="privacy" class="px-5 py-16 sm:py-[76px]">
+      <div class="mx-auto grid max-w-6xl items-center gap-9 md:grid-cols-[1fr_1.05fr]">
+        <div>
+          <p class="text-[10px] font-extrabold uppercase tracking-[.19em] text-emerald-600">Your media stays yours</p>
+          <h2 class="mt-3 font-display text-[30px] font-extrabold leading-tight tracking-[-.05em] text-slate-950 sm:text-[38px]">Private from the<br />first frame.</h2>
+          <p class="mt-4 max-w-md text-[13px] leading-6 text-slate-500">Your selected photo and video are handled in this browser session. Live camera access is only requested when you choose it, and you can stop it any time.</p><a href="#workspace" class="mt-6 inline-flex items-center gap-2 text-[12px] font-bold text-indigo-600 transition hover:text-indigo-800">Try the studio <span aria-hidden="true">→</span></a>
+        </div>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div class="rounded-[18px] border border-slate-200/70 bg-white p-5"><span class="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600"><svg width="17" height="17" viewBox="0 0 18 18" fill="none">
+                <path d="M9 2 14.5 4.5v4c0 3.4-2.4 5.8-5.5 7.1C5.9 14.3 3.5 11.9 3.5 8.5v-4L9 2Z" stroke="currentColor" stroke-width="1.4" />
+                <path d="m6.8 8.8 1.5 1.5 3.2-3.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+              </svg></span>
+            <h3 class="mt-4 text-[13px] font-bold">No uploads</h3>
+            <p class="mt-1.5 text-[11px] leading-5 text-slate-500">Your media isn't sent to a server for analysis.</p>
+          </div>
+          <div class="rounded-[18px] border border-slate-200/70 bg-white p-5"><span class="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600"><svg width="17" height="17" viewBox="0 0 18 18" fill="none">
+                <path d="M9 2v2.2M9 13.8V16M2 9h2.2m9.6 0H16M4.05 4.05l1.56 1.56m6.78 6.78 1.56 1.56m0-9.9-1.56 1.56m-6.78 6.78-1.56 1.56" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                <circle cx="9" cy="9" r="3.2" stroke="currentColor" stroke-width="1.5" />
+              </svg></span>
+            <h3 class="mt-4 text-[13px] font-bold">Clear when done</h3>
+            <p class="mt-1.5 text-[11px] leading-5 text-slate-500">Remove loaded media from the workspace with one click.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer class="border-t border-slate-200/70 bg-white/60 px-5 py-6">
+    <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 text-[12px] text-slate-500 sm:flex-row">
+      <p>© <span id="year"></span> Campus Trace AI</p>
+      <p>Developed by <strong class="text-indigo-700">ThinkX</strong></p>
+    </div>
+  </footer>
+  <script src="./app.js"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"e3c1c9af36de41759418005494a48906","r":1,"spa":2}' crossorigin="anonymous"></script>
+</body>
+
+</html>
